@@ -1,26 +1,83 @@
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use(cookieParser());
 
 // ── Auth middleware (protects dashboard + data routes) ────────────────────────
+// POST /login — check password, set cookie
+// Simple token-based auth (no browser popup)
+const COOKIE_NAME = 'dash_auth';
+
 function requireAuth(req, res, next) {
   const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'changeme';
-  const auth = req.headers['authorization'];
+  const token = req.cookies && req.cookies[COOKIE_NAME];
+  if (token && Buffer.from(token, 'base64').toString() === ADMIN_PASS) return next();
 
-  if (auth && auth.startsWith('Basic ')) {
-    const decoded = Buffer.from(auth.slice(6), 'base64').toString();
-    // username:password — only check password, ignore username
-    const colonIdx = decoded.indexOf(':');
-    const pass = colonIdx >= 0 ? decoded.slice(colonIdx + 1) : decoded;
-    if (pass === ADMIN_PASS) return next();
+  // Not authed — show login page
+  res.status(401).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Login — Dashboard</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;
+       display:flex;align-items:center;justify-content:center;min-height:100vh}
+  .card{background:#1e293b;border-radius:16px;padding:40px 36px;width:100%;max-width:380px;
+        box-shadow:0 20px 50px rgba(0,0,0,.5)}
+  h1{font-size:1.3rem;margin-bottom:6px;color:#a5b4fc}
+  p{font-size:.85rem;color:#64748b;margin-bottom:28px}
+  label{display:block;font-size:.8rem;color:#94a3b8;margin-bottom:6px}
+  input{width:100%;padding:11px 14px;background:#0f172a;border:1px solid #334155;
+        border-radius:8px;color:#e2e8f0;font-size:.95rem;outline:none;margin-bottom:18px}
+  input:focus{border-color:#6366f1}
+  button{width:100%;padding:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);
+         border:none;border-radius:8px;color:#fff;font-size:1rem;font-weight:600;cursor:pointer}
+  button:hover{opacity:.88}
+  .err{color:#f87171;font-size:.83rem;margin-bottom:14px;display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🔒 Dashboard Login</h1>
+  <p>Basit Ahmad Ganie · Analytics</p>
+  <div class="err" id="err">Wrong password. Try again.</div>
+  <label>Password</label>
+  <input type="password" id="pw" placeholder="Enter your password" autofocus>
+  <button onclick="login()">Enter Dashboard</button>
+</div>
+<script>
+  // show error if redirected after bad attempt
+  if (location.search.includes('err=1')) {
+    document.getElementById('err').style.display = 'block';
   }
-
-  res.set('WWW-Authenticate', 'Basic realm="Basit Dashboard", charset="UTF-8"');
-  res.status(401).json({ error: 'Wrong password.' });
+  document.getElementById('pw').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') login();
+  });
+  function login() {
+    var pw = document.getElementById('pw').value;
+    fetch('/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw })
+    }).then(r => r.json()).then(d => {
+      if (d.ok) location.reload();
+      else {
+        document.getElementById('err').style.display = 'block';
+        document.getElementById('pw').value = '';
+        document.getElementById('pw').focus();
+      }
+    });
+  }
+</script>
+</body>
+</html>`);
 }
 
 // ── Database ──────────────────────────────────────────────────────────────────
@@ -101,6 +158,24 @@ async function geoLookup(ip) {
 }
 
 // ── Routes ────────────────────────────────────────────────────────────────────
+
+// POST /auth — validate password, set cookie
+app.post('/auth', (req, res) => {
+  const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'changeme';
+  const { password } = req.body;
+  if (password === ADMIN_PASS) {
+    const token = Buffer.from(ADMIN_PASS).toString('base64');
+    res.cookie(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+    res.json({ ok: true });
+  } else {
+    res.status(401).json({ ok: false });
+  }
+});
 
 // POST /track — initial visit
 app.post('/track', async (req, res) => {
