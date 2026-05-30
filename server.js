@@ -6,6 +6,33 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// ── Auth middleware (protects dashboard + data routes) ────────────────────────
+function requireAuth(req, res, next) {
+  const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'changeme';
+  const auth = req.headers['authorization'];
+
+  if (auth && auth.startsWith('Basic ')) {
+    const decoded = Buffer.from(auth.slice(6), 'base64').toString();
+    const [, pass] = decoded.split(':');
+    if (pass === ADMIN_PASS) return next();
+  }
+
+  res.set('WWW-Authenticate', 'Basic realm="Basit Dashboard"');
+  res.status(401).send(`<!DOCTYPE html>
+<html><head><title>Access Denied</title>
+<style>
+  body{font-family:sans-serif;background:#0f172a;color:#e2e8f0;display:flex;
+       align-items:center;justify-content:center;min-height:100vh;margin:0}
+  .box{text-align:center;padding:40px}
+  h1{color:#f87171;margin-bottom:8px}
+  p{color:#64748b}
+</style></head>
+<body><div class="box">
+  <h1>🔒 Access Denied</h1>
+  <p>Enter your admin password to continue.</p>
+</div></body></html>`);
+}
+
 // ── Database ──────────────────────────────────────────────────────────────────
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -142,19 +169,19 @@ app.post('/inquiry', async (req, res) => {
 });
 
 // GET /visitors — raw visitor list
-app.get('/visitors', async (req, res) => {
+app.get('/visitors', requireAuth, async (req, res) => {
   const result = await pool.query('SELECT * FROM visitors ORDER BY timestamp DESC LIMIT 500');
   res.json(result.rows);
 });
 
 // GET /inquiries — all hire me submissions
-app.get('/inquiries', async (req, res) => {
+app.get('/inquiries', requireAuth, async (req, res) => {
   const result = await pool.query('SELECT * FROM inquiries ORDER BY timestamp DESC');
   res.json(result.rows);
 });
 
 // GET /stats — aggregated stats
-app.get('/stats', async (req, res) => {
+app.get('/stats', requireAuth, async (req, res) => {
   const [total, byCountry, byBrowser, byDevice, byPage, recent,
          totalInquiries, recentInquiries, avgSession, topSections] = await Promise.all([
     pool.query('SELECT COUNT(*) FROM visitors'),
@@ -186,7 +213,7 @@ app.get('/stats', async (req, res) => {
 });
 
 // GET /dashboard — HTML dashboard
-app.get('/dashboard', (req, res) => {
+app.get('/dashboard', requireAuth, (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
