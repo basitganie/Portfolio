@@ -13,24 +13,14 @@ function requireAuth(req, res, next) {
 
   if (auth && auth.startsWith('Basic ')) {
     const decoded = Buffer.from(auth.slice(6), 'base64').toString();
-    const [, pass] = decoded.split(':');
+    // username:password — only check password, ignore username
+    const colonIdx = decoded.indexOf(':');
+    const pass = colonIdx >= 0 ? decoded.slice(colonIdx + 1) : decoded;
     if (pass === ADMIN_PASS) return next();
   }
 
-  res.set('WWW-Authenticate', 'Basic realm="Basit Dashboard"');
-  res.status(401).send(`<!DOCTYPE html>
-<html><head><title>Access Denied</title>
-<style>
-  body{font-family:sans-serif;background:#0f172a;color:#e2e8f0;display:flex;
-       align-items:center;justify-content:center;min-height:100vh;margin:0}
-  .box{text-align:center;padding:40px}
-  h1{color:#f87171;margin-bottom:8px}
-  p{color:#64748b}
-</style></head>
-<body><div class="box">
-  <h1>🔒 Access Denied</h1>
-  <p>Enter your admin password to continue.</p>
-</div></body></html>`);
+  res.set('WWW-Authenticate', 'Basic realm="Basit Dashboard", charset="UTF-8"');
+  res.status(401).json({ error: 'Wrong password.' });
 }
 
 // ── Database ──────────────────────────────────────────────────────────────────
