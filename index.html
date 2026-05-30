@@ -12,21 +12,133 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css"/>
 
-<!-- Visitor Tracking -->
-<script>
-  window.addEventListener('load', function () {
-    fetch('https://portfolio-b4ut.onrender.com/track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        referrer: document.referrer || 'Direct',
-        page: window.location.pathname
-      })
-    }).catch(function () {});
-  });
-</script>
+<style>
+/* ── Hire Me Modal ───────────────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: #1e293b;
+  border-radius: 16px;
+  padding: 36px;
+  width: 100%;
+  max-width: 520px;
+  position: relative;
+  color: #e2e8f0;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+  animation: popIn .25s ease;
+}
+@keyframes popIn {
+  from { transform: scale(.92); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.modal h2 { font-size: 1.4rem; margin-bottom: 4px; color: #a5b4fc; }
+.modal p.sub { font-size: .85rem; color: #64748b; margin-bottom: 24px; }
+.modal-close {
+  position: absolute; top: 16px; right: 20px;
+  background: none; border: none; color: #94a3b8;
+  font-size: 1.4rem; cursor: pointer; line-height: 1;
+}
+.modal-close:hover { color: #f87171; }
+.modal label { display: block; font-size: .8rem; color: #94a3b8; margin-bottom: 5px; margin-top: 14px; }
+.modal input, .modal select, .modal textarea {
+  width: 100%; padding: 10px 14px;
+  background: #0f172a; border: 1px solid #334155;
+  border-radius: 8px; color: #e2e8f0; font-size: .9rem;
+  outline: none; transition: border .2s;
+}
+.modal input:focus, .modal select:focus, .modal textarea:focus { border-color: #6366f1; }
+.modal select option { background: #1e293b; }
+.modal textarea { resize: vertical; min-height: 90px; }
+.modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.chip {
+  padding: 6px 12px; border-radius: 99px; font-size: .78rem;
+  border: 1px solid #334155; cursor: pointer; color: #94a3b8;
+  background: #0f172a; transition: all .2s; user-select: none;
+}
+.chip.selected { background: #6366f1; border-color: #6366f1; color: #fff; }
+.modal-submit {
+  width: 100%; margin-top: 22px; padding: 12px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none; border-radius: 8px; color: #fff;
+  font-size: 1rem; font-weight: 600; cursor: pointer;
+  transition: opacity .2s;
+}
+.modal-submit:hover { opacity: .88; }
+.modal-success { text-align: center; padding: 20px 0; }
+.modal-success i { font-size: 2.5rem; color: #34d399; margin-bottom: 12px; }
+.modal-success h3 { color: #e2e8f0; margin-bottom: 8px; }
+.modal-success p { color: #64748b; font-size: .9rem; }
+</style>
 </head>
 <body>
+
+<!-- ── Hire Me Modal ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="hireModal">
+  <div class="modal">
+    <button class="modal-close" id="closeModal">&times;</button>
+    <h2>Let's work together</h2>
+    <p class="sub">Tell me what you need — I'll get back to you within 24 hours.</p>
+
+    <div id="modalForm">
+      <div class="modal-row">
+        <div>
+          <label>Your Name *</label>
+          <input type="text" id="hName" placeholder="e.g. Ahmed Khan" required>
+        </div>
+        <div>
+          <label>Your Email *</label>
+          <input type="email" id="hEmail" placeholder="you@example.com" required>
+        </div>
+      </div>
+
+      <label>What do you need? *</label>
+      <div class="modal-chips" id="serviceChips">
+        <span class="chip" data-val="Backend Development">Backend Dev</span>
+        <span class="chip" data-val="Game Development">Game Dev</span>
+        <span class="chip" data-val="Math Tutoring">Math Tutoring</span>
+        <span class="chip" data-val="Physics Classes">Physics Classes</span>
+        <span class="chip" data-val="Coding Tutoring">Coding Tutoring</span>
+        <span class="chip" data-val="Open Source Collaboration">Open Source</span>
+        <span class="chip" data-val="Internship Opportunity">Internship</span>
+        <span class="chip" data-val="Build Something">Build Something</span>
+        <span class="chip" data-val="Other">Other</span>
+      </div>
+
+      <label>Budget (optional)</label>
+      <select id="hBudget">
+        <option value="">— select if applicable —</option>
+        <option>Under $50</option>
+        <option>$50 – $150</option>
+        <option>$150 – $500</option>
+        <option>$500+</option>
+        <option>Negotiable</option>
+        <option>Not applicable (tutoring/collab)</option>
+      </select>
+
+      <label>Tell me more *</label>
+      <textarea id="hMessage" placeholder="Brief description of your project, subject, or idea..."></textarea>
+
+      <button class="modal-submit" id="modalSubmit">Send Inquiry</button>
+    </div>
+
+    <div class="modal-success" id="modalSuccess" style="display:none">
+      <i class="fas fa-check-circle"></i>
+      <h3>Got it!</h3>
+      <p>I'll reply to your email within 24 hours.<br>Thanks for reaching out.</p>
+    </div>
+  </div>
+</div>
+
 <div class="scroll-up-btn">
   <i class="fas fa-angle-up"></i>
 </div>
@@ -55,7 +167,7 @@
       <div class="text-1">Hello, my name is</div>
       <div class="text-2">Basit Ahmad Ganie</div>
       <div class="text-3">And I am a <span class="typing"></span></div>
-      <a href="#">Hire me</a>
+      <a href="#" id="hireMeBtn">Hire me</a>
     </div>
   </div>
 </section>
@@ -71,7 +183,7 @@
       <div class="column right">
         <div class="text">I am Basit and I am a <span class="typing-2"></span></div>
         <p>I'm a Mathematics undergraduate and a Computer Science polytechnic student from Anantnag, J&K. I work mostly on the backend — building systems, writing compilers, and getting things to actually run. I created Velocity, my own compiled programming language. I keep things simple and I'm still learning.</p>
-        <a href="cv.pdf" download>Download CV</a>
+        <a href="cv.pdf" download id="cvDownloadBtn">Download CV</a>
       </div>
     </div>
   </div>
@@ -91,16 +203,16 @@
       </div>
       <div class="card">
         <div class="box">
-          <i class="fas fa-code"></i>
-          <div class="text">Frontend Development</div>
-          <p>Basic web interfaces using HTML and CSS. Nothing fancy — clean and functional.</p>
+          <i class="fas fa-gamepad"></i>
+          <div class="text">Game Development</div>
+          <p>Building games — logic, mechanics, and systems. Still growing in this space but genuinely interested.</p>
         </div>
       </div>
       <div class="card">
         <div class="box">
           <i class="fas fa-chalkboard-teacher"></i>
           <div class="text">Tutoring</div>
-          <p>Math tutoring and help with Linux, Bash scripting, and programming basics.</p>
+          <p>Math, Physics, Linux/Bash, and programming. Online or in-person. Patient and straightforward.</p>
         </div>
       </div>
     </div>
@@ -115,7 +227,7 @@
       <div class="column left">
         <div class="text">Languages & tools I work with.</div>
         <p>I focus mostly on systems programming and backend work. I also built Velocity, a compiled language I wrote from scratch. Still learning, always building.</p>
-        <a href="#">Read more</a>
+        <a href="#" id="hireMeBtn2">Work with me</a>
       </div>
       <div class="column right">
         <div class="bars">
@@ -237,7 +349,7 @@
             <textarea cols="30" rows="10" placeholder="Message.." name="message" required></textarea>
           </div>
           <div class="button-area">
-            <button type="submit">Send message</button>
+            <button type="submit" id="contactSubmitBtn">Send message</button>
           </div>
         </form>
       </div>
@@ -250,5 +362,171 @@
 </footer>
 
 <script src="BIO_script.js"></script>
+
+<script>
+(function () {
+  const BASE = 'https://portfolio-b4ut.onrender.com';
+  const startTime = Date.now();
+  let visitorId = null;
+  const sectionsReached = new Set();
+
+  // ── 1. Initial visit ping ──────────────────────────────────
+  fetch(BASE + '/track', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      referrer: document.referrer || 'Direct',
+      page: window.location.pathname,
+      screen: window.screen.width + 'x' + window.screen.height,
+      language: navigator.language || 'unknown',
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown',
+      connection: (navigator.connection && navigator.connection.effectiveType) || 'unknown'
+    })
+  })
+  .then(r => r.json())
+  .then(d => { if (d.id) visitorId = d.id; })
+  .catch(function(){});
+
+  // ── 2. Event ping helper ───────────────────────────────────
+  function trackEvent(type, data) {
+    fetch(BASE + '/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ type: type, visitor_id: visitorId }, data))
+    }).catch(function(){});
+  }
+
+  // ── 3. Session duration on page leave ─────────────────────
+  window.addEventListener('beforeunload', function () {
+    const duration = Math.round((Date.now() - startTime) / 1000);
+    const payload = JSON.stringify({
+      type: 'session_end',
+      visitor_id: visitorId,
+      duration_seconds: duration,
+      sections_reached: Array.from(sectionsReached).join(',')
+    });
+    // sendBeacon is more reliable on page close
+    navigator.sendBeacon(BASE + '/event', new Blob([payload], { type: 'application/json' }));
+  });
+
+  // ── 4. Scroll section tracking ────────────────────────────
+  var sections = ['home','about','services','skills','teams','contact'];
+  sections.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var triggered = false;
+    window.addEventListener('scroll', function() {
+      if (triggered) return;
+      var rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight * 0.75) {
+        triggered = true;
+        sectionsReached.add(id);
+        trackEvent('scroll_section', { section: id });
+      }
+    }, { passive: true });
+  });
+
+  // ── 5. Click tracking ─────────────────────────────────────
+  // Hire me buttons
+  ['hireMeBtn','hireMeBtn2'].forEach(function(btnId) {
+    var btn = document.getElementById(btnId);
+    if (btn) btn.addEventListener('click', function() {
+      trackEvent('click_hire_me', {});
+    });
+  });
+
+  // CV download
+  var cvBtn = document.getElementById('cvDownloadBtn');
+  if (cvBtn) cvBtn.addEventListener('click', function() {
+    trackEvent('click_cv_download', {});
+  });
+
+  // Contact form submit
+  var contactBtn = document.getElementById('contactSubmitBtn');
+  if (contactBtn) contactBtn.addEventListener('click', function() {
+    trackEvent('click_contact_submit', {});
+  });
+
+  // ── 6. Hire Me Modal logic ────────────────────────────────
+  var modal    = document.getElementById('hireModal');
+  var closeBtn = document.getElementById('closeModal');
+  var chips    = document.querySelectorAll('.chip');
+  var submitBtn = document.getElementById('modalSubmit');
+
+  function openModal() {
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+    // reset
+    document.getElementById('modalSuccess').style.display = 'none';
+    document.getElementById('modalForm').style.display = 'block';
+  }
+
+  document.getElementById('hireMeBtn').addEventListener('click', function(e) {
+    e.preventDefault(); openModal();
+  });
+  var btn2 = document.getElementById('hireMeBtn2');
+  if (btn2) btn2.addEventListener('click', function(e) {
+    e.preventDefault(); openModal();
+  });
+  closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) closeModal();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // Chip toggle
+  chips.forEach(function(chip) {
+    chip.addEventListener('click', function() {
+      chip.classList.toggle('selected');
+    });
+  });
+
+  // Modal form submit → send to your backend
+  submitBtn.addEventListener('click', function() {
+    var name    = document.getElementById('hName').value.trim();
+    var email   = document.getElementById('hEmail').value.trim();
+    var message = document.getElementById('hMessage').value.trim();
+    var budget  = document.getElementById('hBudget').value;
+    var selected = Array.from(document.querySelectorAll('.chip.selected')).map(function(c){ return c.dataset.val; });
+
+    if (!name || !email || !message || selected.length === 0) {
+      alert('Please fill in your name, email, select at least one service, and add a message.');
+      return;
+    }
+
+    submitBtn.textContent = 'Sending...';
+    submitBtn.disabled = true;
+
+    fetch(BASE + '/inquiry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name,
+        email: email,
+        services: selected.join(', '),
+        budget: budget,
+        message: message
+      })
+    })
+    .then(function() {
+      document.getElementById('modalForm').style.display = 'none';
+      document.getElementById('modalSuccess').style.display = 'block';
+      trackEvent('inquiry_submitted', { services: selected.join(',') });
+    })
+    .catch(function() {
+      submitBtn.textContent = 'Send Inquiry';
+      submitBtn.disabled = false;
+      alert('Something went wrong. Try emailing me directly at basitahmed1412@gmail.com');
+    });
+  });
+
+})();
+</script>
 </body>
 </html>
